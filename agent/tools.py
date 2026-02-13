@@ -70,6 +70,10 @@ def call_tool(tool_name: str, args: dict):
     if tool_name not in tool_map:
         raise ValueError(f"Tool {tool_name} not found")
     print(f"Calling tool {tool_name} with args {args}")
+    confirm = input("Press Enter to continue...")
+    if confirm.lower() == "exit":
+        print("Exiting...")
+        exit(0)
     return tool_map[tool_name](**args)
 
 def call_tools(tool_calls: list[ToolCall]):
