@@ -1,11 +1,13 @@
 import subprocess
 import shlex
 from models.model_tools import add_tool, Tool, ToolArgument, get_model_tools
+from models.response import Response, ToolCall
 
 
 def execute_command(cmd: str):
     result = subprocess.run(
-        shlex.split(cmd),
+        cmd,
+        shell=True,
         capture_output=True,
         text=True
     )
@@ -57,3 +59,28 @@ def configure_all_tools():
                          description="The path to the file")
         ]
     ))
+
+tool_map = {
+    "execute_command": execute_command,
+    "write_file": write_file,
+    "read_file": read_file
+}
+
+def call_tool(tool_name: str, args: dict):
+    if tool_name not in tool_map:
+        raise ValueError(f"Tool {tool_name} not found")
+    print(f"Calling tool {tool_name} with args {args}")
+    return tool_map[tool_name](**args)
+
+def call_tools(tool_calls: list[ToolCall]):
+    results = []
+    for tool_call in tool_calls:
+        tool_name = tool_call.tool_name
+        args = tool_call.args
+        result = call_tool(tool_name, args)
+        results.append({
+            "tool_name": tool_name,
+            "result": result
+        })
+    return results
+

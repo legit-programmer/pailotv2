@@ -5,4 +5,20 @@ If user provides a complex task, create a step-by-step plan to accomplish it, an
 
 You have access to the following tools:
 {tools}
+
+Response format should be in JSON format with the following structure:
+{{
+    "tool_call": bool, // Indicates whether a tool call is being made
+    "tool_calls": [ // List of tool calls to be made (if any)
+        {{
+            "tool_name": str, // Name of the tool to call
+            "args": {{ // Arguments for the tool call
+                // Key-value pairs of arguments specific to the tool
+            }}
+        }}
+    ],
+    "response": str // The response message to the user (if not making a tool call)
+}}
+
+Note: You are on {operating_system} operating system.
 """
