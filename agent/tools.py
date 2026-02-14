@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import shlex
 from models.model_tools import add_tool, Tool, ToolArgument, get_model_tools
@@ -76,15 +77,38 @@ def call_tool(tool_name: str, args: dict):
         exit(0)
     return tool_map[tool_name](**args)
 
-def call_tools(tool_calls: list[ToolCall]):
+async def call_mcp_tool(tool: dict, args, ctx):
+    print(f"Calling MCP tool {tool['name']} with args {args}")
+    mcp_of = tool.get("mcp_of")
+    session = None
+    if mcp_of == "playwright":
+        session = await ctx.browser_tool.get_session()
+    if not session:
+        raise ValueError(f"No session found for MCP tool {tool['name']}")
+    result = await session.call_tool(tool["name"], args)
+    return result
+
+async def call_tools(tool_calls: list[ToolCall], available_mcp_tools=None, ctx=None):
     results = []
+    print(f"Received tool calls: {[{'tool_name': tc.tool_name, 'args': tc.args} for tc in tool_calls]}")
     for tool_call in tool_calls:
         tool_name = tool_call.tool_name
         args = tool_call.args
-        result = call_tool(tool_name, args)
+        result = None
+        
+        if available_mcp_tools and ctx:
+            for tool in available_mcp_tools:
+                if tool["name"] == tool_name:                    
+                    result = await call_mcp_tool(tool, args, ctx)
+                    break
+        
+        if not result:
+            result = call_tool(tool_name, args)
+
         results.append({
             "tool_name": tool_name,
             "result": result
         })
+
     return results
 
