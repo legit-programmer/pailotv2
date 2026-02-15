@@ -8,7 +8,6 @@ from agent.prompts import SYSTEM_PROMPT
 from agent.tools import configure_all_tools, call_tools
 from models.model_tools import get_model_tools, ModelTools
 from langchain_core.output_parsers import JsonOutputParser
-from mcps.playwright_client import BrowserTool
 
 
 config = get_config()
