@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 import shlex
+from mcps.mcp_manager import MCPManager
 from models.model_tools import add_tool, Tool, ToolArgument, get_model_tools
 from models.response import Response, ToolCall
 
@@ -77,18 +78,8 @@ def call_tool(tool_name: str, args: dict):
         exit(0)
     return tool_map[tool_name](**args)
 
-async def call_mcp_tool(tool: dict, args, ctx):
-    print(f"Calling MCP tool {tool['name']} with args {args}")
-    mcp_of = tool.get("mcp_of")
-    session = None
-    if mcp_of == "playwright":
-        session = await ctx.browser_tool.get_session()
-    if not session:
-        raise ValueError(f"No session found for MCP tool {tool['name']}")
-    result = await session.call_tool(tool["name"], args)
-    return result
 
-async def call_tools(tool_calls: list[ToolCall], available_mcp_tools=None, ctx=None):
+async def call_tools(tool_calls: list[ToolCall], mcp_manager: MCPManager=None):
     results = []
     print(f"Received tool calls: {[{'tool_name': tc.tool_name, 'args': tc.args} for tc in tool_calls]}")
     for tool_call in tool_calls:
@@ -96,14 +87,15 @@ async def call_tools(tool_calls: list[ToolCall], available_mcp_tools=None, ctx=N
         args = tool_call.args
         result = None
         
-        if available_mcp_tools and ctx:
-            for tool in available_mcp_tools:
-                if tool["name"] == tool_name:                    
-                    result = await call_mcp_tool(tool, args, ctx)
-                    break
-        
-        if not result:
-            result = call_tool(tool_name, args)
+        try:
+            if mcp_manager:
+                result = await mcp_manager.call_tool(tool_name, args)
+            if not result:
+                result = call_tool(tool_name, args)
+        except Exception as e:
+            result = f"Error calling tool {tool_name}: {e}"
+            
+
 
         results.append({
             "tool_name": tool_name,

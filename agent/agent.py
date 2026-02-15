@@ -1,35 +1,32 @@
+from mcps.mcp_manager import MCPManager
 from models.response import Response
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import asyncio
-from dotenv import load_dotenv
+from config import get_config
 from agent.prompts import SYSTEM_PROMPT
 from agent.tools import configure_all_tools, call_tools
 from models.model_tools import get_model_tools, ModelTools
 from langchain_core.output_parsers import JsonOutputParser
 from mcps.playwright_client import BrowserTool
 
-load_dotenv()
+
+config = get_config()
 
 class Agent:
-    def __init__(self, tools: ModelTools, model_name, enable_browser=True):
+    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None):
         self.messages = []
         self.tools = tools
         self.model_name = model_name
         self.llm = None
-        self.chain = None
         self.response_parser = None
-        self.enable_browser = enable_browser
-        self.browser_tool = None
         self.mcp_tools = None
+        self.mcp_manager = mcp_manager
     
     async def initialize(self):
-        if self.enable_browser:
-            self.browser_tool = BrowserTool()
-            print("starting playwright mcp server...")
-            await self.browser_tool.connect()
-            self.mcp_tools = await self.browser_tool.get_tools()
-            print(f"Playwright MCP server connected. Tools available: {[t['name'] for t in self.mcp_tools]}")
+        if self.mcp_manager:
+            self.mcp_tools = await self.mcp_manager.discover_all_tools()
+            print(f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
         all_tools = self.tools.model_dump_json() + "\n" + str(self.mcp_tools) if self.mcp_tools else ""
         system_prompt = SYSTEM_PROMPT.format(tools=all_tools, operating_system="Windows")
         self.messages.append(SystemMessage(system_prompt))
@@ -56,19 +53,17 @@ class Agent:
 
 async def main():
     configure_all_tools()
-    agent = Agent(get_model_tools(), 'gpt-5-mini')
+    mcp_manager = MCPManager()
+    await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
+    await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key) 
+    agent = Agent(get_model_tools(), 'gpt-5-mini', mcp_manager=mcp_manager)
     await agent.initialize_openai()
     while True:
         user_msg = input(">")
         response  = await agent.inference(user_msg)
         while response.tool_call:
-            result = None
-            try:
-                
-                result = await call_tools(response.tool_calls, available_mcp_tools=agent.mcp_tools, ctx=agent)
-            except Exception as e:
-                print(f"Error calling tools: {e}")
-                result = "Error calling tools"
+        
+            result = await call_tools(response.tool_calls, mcp_manager=agent.mcp_manager)   
             
             try:
                 response = await agent.inference(f"The result of the tool calls is: {result}")

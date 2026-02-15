@@ -1,0 +1,5 @@
+- gateway with events support
+- implement events
+- implement surfaces (discord, tele etc)
+- improve web browsing support
+- improve context management
