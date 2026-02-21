@@ -1,3 +1,4 @@
+- implement a tool which can execute commands with old context (for example, if the agent has to execute a command but it needs to use some of the old context, it can use this tool to execute the command with the old context) instead of generating the context all over again
 - gateway with events support
 - implement events
 - implement surfaces (discord, tele etc)
