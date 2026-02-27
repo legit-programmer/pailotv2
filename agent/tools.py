@@ -62,13 +62,8 @@ def configure_all_tools():
         ]
     ))
 
-tool_map = {
-    "execute_command": execute_command,
-    "write_file": write_file,
-    "read_file": read_file
-}
 
-def call_tool(tool_name: str, args: dict):
+def call_tool(tool_name: str, args: dict, tool_map: dict):
     if tool_name not in tool_map:
         raise ValueError(f"Tool {tool_name} not found")
     print(f"Calling tool {tool_name} with args {args}")
@@ -79,7 +74,13 @@ def call_tool(tool_name: str, args: dict):
     return tool_map[tool_name](**args)
 
 
-async def call_tools(tool_calls: list[ToolCall], mcp_manager: MCPManager=None):
+async def call_tools(tool_calls: list[ToolCall], agent):
+    tool_map = agent.tool_map
+    mcp_manager = agent.mcp_manager
+
+    if not tool_map:
+        print("No tool map, skipping tool calls")
+        return []
     results = []
     print(f"Received tool calls: {[{'tool_name': tc.tool_name, 'args': tc.args} for tc in tool_calls]}")
     for tool_call in tool_calls:
@@ -91,7 +92,7 @@ async def call_tools(tool_calls: list[ToolCall], mcp_manager: MCPManager=None):
             if mcp_manager:
                 result = await mcp_manager.call_tool(tool_name, args)
             if not result:
-                result = call_tool(tool_name, args)
+                result = call_tool(tool_name, args, tool_map=tool_map)
         except Exception as e:
             result = f"Error calling tool {tool_name}: {e}"
             
