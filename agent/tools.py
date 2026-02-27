@@ -33,34 +33,34 @@ def read_file(path: str):
 
 def configure_all_tools():
     print("Configuring tools...")
-    add_tool(Tool(
-        name="execute_command",
-        description="Executes a shell command and returns the output, error and exit code.",
-        args=[
-            ToolArgument(name="cmd", type="str",
-                         description="The command to execute")
-        ]
-    ))
+        # add_tool(Tool(
+        #     name="execute_command",
+        #     description="Executes a shell command and returns the output, error and exit code.",
+        #     args=[
+        #         ToolArgument(name="cmd", type="str",
+        #                      description="The command to execute")
+        #     ]
+        # ))
 
-    add_tool(Tool(
-        name="write_file",
-        description="Writes data to a file at the specified path.",
-        args=[
-            ToolArgument(name="path", type="str",
-                         description="The path to the file"),
-            ToolArgument(name="data", type="str",
-                         description="The data to write to the file")
-        ]
-    ))
+        # add_tool(Tool(
+        #     name="write_file",
+        #     description="Writes data to a file at the specified path.",
+        #     args=[
+        #         ToolArgument(name="path", type="str",
+        #                      description="The path to the file"),
+        #         ToolArgument(name="data", type="str",
+        #                      description="The data to write to the file")
+        #     ]
+        # ))
 
-    add_tool(Tool(
-        name="read_file",
-        description="Reads the contents of a file at the specified path and returns it.",
-        args=[
-            ToolArgument(name="path", type="str",
-                         description="The path to the file")
-        ]
-    ))
+        # add_tool(Tool(
+        #     name="read_file",
+        #     description="Reads the contents of a file at the specified path and returns it.",
+        #     args=[
+        #         ToolArgument(name="path", type="str",
+        #                      description="The path to the file")
+        #     ]
+        # ))
 
 
 def call_tool(tool_name: str, args: dict, tool_map: dict):

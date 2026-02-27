@@ -19,8 +19,7 @@ class Agent:
         self.tool_map = {
             "execute_command": execute_command,
             "write_file": write_file,
-            "read_file": read_file,
-            "execute_command_with_old_context": self.execute_command_with_old_context
+            "read_file": read_file
         }
         self.model_name = model_name
         self.llm = None
@@ -54,16 +53,6 @@ class Agent:
             parsed_response = {}
         return Response(**parsed_response)
     
-    def execute_command_with_old_context(self, cmd: str, format_fillers: dict):
-        filled_cmd = cmd
-        for placeholder, filler_info in format_fillers.items():
-            message_index = filler_info['message_index']
-            start_index = filler_info['start_index']
-            end_index = filler_info['end_index']
-            content_to_fill = self.messages[message_index].content[start_index:end_index]
-            filled_cmd = filled_cmd.replace(f"{{{placeholder}}}", content_to_fill)
-        
-        return execute_command(filled_cmd)
     
 
 async def main():
@@ -71,6 +60,7 @@ async def main():
     mcp_manager = MCPManager()
     await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
     await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
+    await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
     agent = Agent(get_model_tools(), 'gpt-5-mini', mcp_manager=mcp_manager)
     await agent.initialize_openai()
