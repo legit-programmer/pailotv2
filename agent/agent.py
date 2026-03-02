@@ -1,3 +1,4 @@
+from agent.session_manager import SessionManager
 from mcps.mcp_manager import MCPManager
 from models.response import Response
 from langchain_openai import ChatOpenAI
@@ -8,13 +9,13 @@ from agent.prompts import SYSTEM_PROMPT
 from agent.tools import configure_all_tools, call_tools, execute_command, read_file, write_file
 from models.model_tools import Tool, get_model_tools, ModelTools
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 config = get_config()
 
 class Agent:
-    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None):
-        self.messages = []
+    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager=None):
         self.tools = tools
         self.tool_map = {
             "execute_command": execute_command,
@@ -26,6 +27,7 @@ class Agent:
         self.response_parser = None
         self.mcp_tools = None
         self.mcp_manager = mcp_manager
+        self.session_manager = session_manager
     
     async def initialize(self):
         if self.mcp_manager:
@@ -33,19 +35,28 @@ class Agent:
             print(f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
         all_tools = self.tools.model_dump_json() + "\n" + str(self.mcp_tools) if self.mcp_tools else ""
         system_prompt = SYSTEM_PROMPT.format(tools=all_tools, operating_system="Windows")
-        self.messages.append(SystemMessage(system_prompt))
+        self.session_manager.set_base_prompt(SystemMessage(content=system_prompt))
 
     async def initialize_openai(self):
         await self.initialize()
         self.llm  = ChatOpenAI(model=self.model_name)
         self.response_parser = JsonOutputParser(pydantic_object=Response)
 
+    async def initialize_google_genai(self):
+        await self.initialize()
+        self.llm = ChatGoogleGenerativeAI(model=self.model_name)
+        self.response_parser = JsonOutputParser(pydantic_object=Response)
 
-    async def inference(self, message: str):
-        self.messages.append(HumanMessage(message))
-        response = await self.llm.ainvoke(self.messages)
+    async def inference(self, message: str, session_id: str = "default_session") -> Response:
+        session = self.session_manager.get_session(session_id)
+        if not session:
+            self.session_manager.create_session(session_id)
+            session = self.session_manager.get_session(session_id)
+        messages = session["messages"]
+        messages.append(HumanMessage(message))
+        response = await self.llm.ainvoke(messages)
         response = response.content
-        self.messages.append(AIMessage(response))
+        messages.append(AIMessage(content=response))
         try:
             parsed_response = self.response_parser.parse(response)
         except Exception as e:
@@ -58,12 +69,13 @@ class Agent:
 async def main():
     configure_all_tools()
     mcp_manager = MCPManager()
+    session_manager = SessionManager()
     await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
     await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
     await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
-    agent = Agent(get_model_tools(), 'gpt-5-mini', mcp_manager=mcp_manager)
-    await agent.initialize_openai()
+    agent = Agent(get_model_tools(), 'gemini-2.5-flash', mcp_manager=mcp_manager, session_manager=session_manager)
+    await agent.initialize_google_genai()
     while True:
         user_msg = input(">")
         response  = await agent.inference(user_msg)
