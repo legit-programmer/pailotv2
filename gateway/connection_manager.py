@@ -11,7 +11,7 @@ class ConnectionManager:
         is_authenticated = verify_token(token)
         if is_authenticated:
             self.active_connections[token] = websocket
-            return await websocket.send_text("Authentication successful")
+            return await Event.send(websocket, EventType.AUTHENTICATED)
         await Event.send(websocket, EventType.UNAUTHORIZED, data={"message": "Invalid token"})
         return await websocket.close()
 
@@ -19,9 +19,8 @@ class ConnectionManager:
         try:
             data = await websocket.receive_json()
             event = Event(**data)
-            if event.event_type == EventType.USER_MESSAGE:
-                print(f"Received user message: {event.data}")
+            if event.event_type == EventType.USER_MESSAGE and event.session_id and event.data:
                 # Here you would typically route the message to the appropriate agent
-                await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": f"Echo: {event.data}"})
+                await Event.send(websocket, EventType.AGENT_RESPONSE, data={'message':event.data["message"]}, session_id=event.session_id)
         except Exception as e:
             await Event.send(websocket, EventType.ERROR, data={"message": str(e)})

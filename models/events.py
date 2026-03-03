@@ -11,6 +11,7 @@ class EventType(str, Enum):
     DESTROY_SESSION = "destroy_session"
     UNAUTHORIZED = "unauthorized"
     ERROR = "error"
+    AUTHENTICATED = "authenticated"
 
 class Event(BaseModel):
     event_type: EventType

@@ -1,21 +1,27 @@
 
+import asyncio
 import discord
 from discord.message import Message
-from surfaces.ws_discord import connect_to_gateway, get_gateway, reset_gateway
+from surfaces.ws_discord import connect_to_gateway, get_gateway, reset_gateway, receive_msgs
 from models.events import Event, EventType
 from dotenv import load_dotenv
 import os
-load_dotenv()  
+load_dotenv()
 
-intents = discord.Intents.default()
-intents.message_content = True
+intents = discord.Intents.all()
 
 client = discord.Client(intents=intents)
+receiver_task = None
+
 
 @client.event
 async def on_ready():
+    global receiver_task
     print(f'We have logged in as {client.user}')
-    await connect_to_gateway("ws://localhost:8000/gateway/ws", token="valid_token")  
+    await connect_to_gateway("ws://localhost:8000/gateway/ws", token="valid_token")
+    if receiver_task is None or receiver_task.done():
+        receiver_task = asyncio.create_task(receive_msgs(client))
+
 
 @client.event
 async def on_message(message: Message):
@@ -25,9 +31,11 @@ async def on_message(message: Message):
     if gateway:
         try:
             await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": message.content}, session_id=str(message.channel.id))
+            await message.channel.typing()
         except Exception as e:
             print(f"Failed to send message to gateway: {e}")
             await reset_gateway()
+
             await message.channel.send("Failed to connect to gateway. Please try again later.")
 
 client.run(os.getenv("BOT_TOKEN"))

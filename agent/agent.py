@@ -91,5 +91,5 @@ async def main():
 
         print(response.response)
 
-
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
