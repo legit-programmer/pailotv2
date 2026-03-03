@@ -1,9 +1,13 @@
+import asyncio
+
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from agent.agent import get_global_agent
 from gateway.connection_manager import ConnectionManager
 
+global_agent = asyncio.run(get_global_agent())
 app = FastAPI()
-cm = ConnectionManager()
+cm = ConnectionManager(global_agent=global_agent)
 
 app.add_middleware(
     CORSMiddleware,

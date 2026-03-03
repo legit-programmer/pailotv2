@@ -64,9 +64,9 @@ class Agent:
             parsed_response = {}
         return Response(**parsed_response)
     
-    
 
-async def main():
+
+async def configure_global_agent():
     configure_all_tools()
     mcp_manager = MCPManager()
     session_manager = SessionManager()
@@ -76,20 +76,31 @@ async def main():
 
     agent = Agent(get_model_tools(), 'gemini-2.5-flash', mcp_manager=mcp_manager, session_manager=session_manager)
     await agent.initialize_google_genai()
+    return agent
+
+agent = None
+async def get_global_agent():
+    global agent
+    if agent is None:
+        agent = await configure_global_agent()
+    return agent
+
+
+async def loop(user_msg, session_id):
+    global agent
+    if agent is None:
+        return "Global Agent is not initialized yet. Please try again in a moment."
+    
     while True:
-        user_msg = input(">")
-        response  = await agent.inference(user_msg)
+        response  = await agent.inference(user_msg, session_id=session_id)
         while response.tool_call:
         
             result = await call_tools(response.tool_calls, agent)   
             
             try:
-                response = await agent.inference(f"The result of the tool calls is: {result}")
+                response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
             except Exception as e:
                 print(f"Error during inference: {e}")
-                input("Press Enter to continue...")
+                return f"Error during inference: {e}"
 
-        print(response.response)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        return response.response
