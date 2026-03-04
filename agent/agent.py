@@ -17,8 +17,9 @@ from langchain_ollama import ChatOllama
 
 config = get_config()
 
+
 class Agent:
-    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager=None):
+    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager = None):
         self.tools = tools
         self.tool_map = {
             "execute_command": execute_command,
@@ -31,16 +32,20 @@ class Agent:
         self.mcp_tools = None
         self.mcp_manager = mcp_manager
         self.session_manager = session_manager
-    
+
     async def initialize(self):
         if self.mcp_manager:
             self.mcp_tools = await self.mcp_manager.discover_all_tools()
-            print(f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
-        all_tools = self.tools.model_dump_json() + "\n" + str(self.mcp_tools) if self.mcp_tools else ""
-        system_prompt = SYSTEM_PROMPT.format(tools=all_tools, operating_system="Windows")
-        self.session_manager.set_base_prompt(SystemMessage(content=system_prompt))
+            print(
+                f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
+        all_tools = self.tools.model_dump_json() + "\n" + \
+            str(self.mcp_tools) if self.mcp_tools else ""
+        system_prompt = SYSTEM_PROMPT.format(
+            tools=all_tools, operating_system="Windows")
+        self.session_manager.set_base_prompt(
+            SystemMessage(content=system_prompt))
 
-    async def initialize_model(self, provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-2.5-flash"):
+    async def initialize_model(self, provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3-flash-preview"):
         await self.initialize()
         if provider == "openai":
             self.llm = ChatOpenAI(model=model_name)
@@ -49,7 +54,6 @@ class Agent:
         elif provider == "ollama":
             self.llm = ChatOllama(model=model_name, reasoning=False)
         self.response_parser = JsonOutputParser(pydantic_object=Response)
-
 
     async def inference(self, message: str, session_id: str = "default_session") -> Response:
         session = self.session_manager.get_session(session_id)
@@ -60,14 +64,21 @@ class Agent:
         messages.append(HumanMessage(message))
         response = await self.llm.ainvoke(messages)
         response = response.content
+        # Some providers return content as a list of blocks instead of a string
+        if isinstance(response, list):
+            response = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in response
+            )
         messages.append(AIMessage(content=response))
         try:
             parsed_response = self.response_parser.parse(response)
+            if not isinstance(parsed_response, dict):
+                parsed_response = {}
         except Exception as e:
             print("Error parsing response:", e)
             parsed_response = {}
         return Response(**parsed_response)
-    
 
 
 async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3-flash-preview") -> Agent:
@@ -76,17 +87,20 @@ async def configure_global_agent(provider: Literal["openai", "google_genai", "ol
     session_manager = SessionManager()
     await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
     await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
-    # await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
+    await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
-    agent = Agent(get_model_tools(), model_name, mcp_manager=mcp_manager, session_manager=session_manager)
+    agent = Agent(get_model_tools(), model_name,
+                  mcp_manager=mcp_manager, session_manager=session_manager)
     await agent.initialize_model(provider=provider, model_name=model_name)
     return agent
 
 agent = None
+
+
 async def get_global_agent():
     global agent
     if agent is None:
-        agent = await configure_global_agent(provider="ollama", model_name="qwen3.5:4b")
+        agent = await configure_global_agent()
     return agent
 
 
@@ -94,13 +108,13 @@ async def loop(user_msg, session_id):
     global agent
     if agent is None:
         return "Global Agent is not initialized yet. Please try again in a moment."
-    
+
     while True:
-        response  = await agent.inference(user_msg, session_id=session_id)
+        response = await agent.inference(user_msg, session_id=session_id)
         while response.tool_call:
-        
-            result = await call_tools(response.tool_calls, agent)   
-            
+
+            result = await call_tools(response.tool_calls, agent)
+
             try:
                 response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
             except Exception as e:
