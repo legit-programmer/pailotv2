@@ -4,9 +4,8 @@ import discord
 from discord.message import Message
 from surfaces.ws_discord import connect_to_gateway, get_gateway, reset_gateway, receive_msgs
 from models.events import Event, EventType
-from dotenv import load_dotenv
 import os
-load_dotenv()
+
 
 intents = discord.Intents.all()
 
@@ -38,4 +37,6 @@ async def on_message(message: Message):
 
             await message.channel.send("Failed to connect to gateway. Please try again later.")
 
-client.run(os.getenv("BOT_TOKEN"))
+async def start_discord_bot():
+    print("Starting Discord bot...")
+    await client.start(os.getenv("BOT_TOKEN"))

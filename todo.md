@@ -8,3 +8,4 @@
 - improve context management
 - heartbeat for websocket connection
 - switch context based on channel ids / session ids, each session is running in its own thread.
+- handle character limits on the client side
