@@ -1,13 +1,23 @@
-import asyncio
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from agent.agent import get_global_agent
 from gateway.connection_manager import ConnectionManager
 
-global_agent = asyncio.run(get_global_agent())
-app = FastAPI()
-cm = ConnectionManager(global_agent=global_agent)
+cm: ConnectionManager = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize the agent inside uvicorn's event loop so MCP sessions
+    # are bound to the same loop that will later call their tools.
+    global cm
+    global_agent = await get_global_agent()
+    cm = ConnectionManager(global_agent=global_agent)
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,6 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
 
 @app.websocket("/gateway/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str):

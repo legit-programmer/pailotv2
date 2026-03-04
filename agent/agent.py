@@ -1,3 +1,5 @@
+from typing import Literal
+
 from agent.session_manager import SessionManager
 from mcps.mcp_manager import MCPManager
 from models.response import Response
@@ -10,6 +12,7 @@ from agent.tools import configure_all_tools, call_tools, execute_command, read_f
 from models.model_tools import Tool, get_model_tools, ModelTools
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 
 
 config = get_config()
@@ -37,15 +40,16 @@ class Agent:
         system_prompt = SYSTEM_PROMPT.format(tools=all_tools, operating_system="Windows")
         self.session_manager.set_base_prompt(SystemMessage(content=system_prompt))
 
-    async def initialize_openai(self):
+    async def initialize_model(self, provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-2.5-flash"):
         await self.initialize()
-        self.llm  = ChatOpenAI(model=self.model_name)
+        if provider == "openai":
+            self.llm = ChatOpenAI(model=model_name)
+        elif provider == "google_genai":
+            self.llm = ChatGoogleGenerativeAI(model=model_name)
+        elif provider == "ollama":
+            self.llm = ChatOllama(model=model_name, reasoning=False)
         self.response_parser = JsonOutputParser(pydantic_object=Response)
 
-    async def initialize_google_genai(self):
-        await self.initialize()
-        self.llm = ChatGoogleGenerativeAI(model=self.model_name)
-        self.response_parser = JsonOutputParser(pydantic_object=Response)
 
     async def inference(self, message: str, session_id: str = "default_session") -> Response:
         session = self.session_manager.get_session(session_id)
@@ -66,23 +70,23 @@ class Agent:
     
 
 
-async def configure_global_agent():
+async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3-flash-preview") -> Agent:
     configure_all_tools()
     mcp_manager = MCPManager()
     session_manager = SessionManager()
     await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
     await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
-    await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
+    # await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
-    agent = Agent(get_model_tools(), 'gemini-2.5-flash', mcp_manager=mcp_manager, session_manager=session_manager)
-    await agent.initialize_google_genai()
+    agent = Agent(get_model_tools(), model_name, mcp_manager=mcp_manager, session_manager=session_manager)
+    await agent.initialize_model(provider=provider, model_name=model_name)
     return agent
 
 agent = None
 async def get_global_agent():
     global agent
     if agent is None:
-        agent = await configure_global_agent()
+        agent = await configure_global_agent(provider="ollama", model_name="qwen3.5:4b")
     return agent
 
 
