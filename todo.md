@@ -1,11 +1,7 @@
-- create an agent specific tool class which takes in an agent object and contains tools which utilizes agent states, for example model name, memory etc. initialize the tool class with the agent object and map the tools accordingly.
-- make tool map agent specific? for eg each agent gets its own tool map which is initialized with the agent object and contains tools which utilizes agent states
-- implement a tool which can execute commands with old context (for example, if the agent has to execute a command but it needs to use some of the old context, it can use this tool to execute the command with the old context) instead of generating the context all over again.
-- gateway with events support
-- implement events
-- implement surfaces (discord, tele etc)
-- improve web browsing support
+- gateway with events support - ongoing
+- implement surfaces (discord, tele etc) - ongoing - discord
 - improve context management
 - heartbeat for websocket connection
 - switch context based on channel ids / session ids, each session is running in its own thread.
 - handle character limits on the client side
+- add file upload support

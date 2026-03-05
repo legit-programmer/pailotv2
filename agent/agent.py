@@ -85,7 +85,7 @@ async def configure_global_agent(provider: Literal["openai", "google_genai", "ol
     configure_all_tools()
     mcp_manager = MCPManager()
     session_manager = SessionManager()
-    await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless"])
+    await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium"])
     await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
     await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
