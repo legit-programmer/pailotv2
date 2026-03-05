@@ -13,7 +13,7 @@ from models.model_tools import Tool, get_model_tools, ModelTools
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
-
+from datetime import datetime
 
 config = get_config()
 
@@ -41,18 +41,18 @@ class Agent:
         all_tools = self.tools.model_dump_json() + "\n" + \
             str(self.mcp_tools) if self.mcp_tools else ""
         system_prompt = SYSTEM_PROMPT.format(
-            tools=all_tools, operating_system="Windows")
+            tools=all_tools, operating_system="Windows", current_datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.session_manager.set_base_prompt(
             SystemMessage(content=system_prompt))
 
-    async def initialize_model(self, provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3-flash-preview"):
+    async def initialize_model(self, provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3.1-flash-lite-preview"):
         await self.initialize()
         if provider == "openai":
             self.llm = ChatOpenAI(model=model_name)
         elif provider == "google_genai":
             self.llm = ChatGoogleGenerativeAI(model=model_name)
         elif provider == "ollama":
-            self.llm = ChatOllama(model=model_name, reasoning=False)
+            self.llm = ChatOllama(model=model_name)
         self.response_parser = JsonOutputParser(pydantic_object=Response)
 
     async def inference(self, message: str, session_id: str = "default_session") -> Response:
@@ -81,7 +81,7 @@ class Agent:
         return Response(**parsed_response)
 
 
-async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3-flash-preview") -> Agent:
+async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3.1-flash-lite-preview") -> Agent:
     configure_all_tools()
     mcp_manager = MCPManager()
     session_manager = SessionManager()
@@ -114,8 +114,9 @@ async def loop(user_msg, session_id):
         while response.tool_call:
 
             result = await call_tools(response.tool_calls, agent)
-
+            print("pushing results to context")
             try:
+                print("inferencing now..")
                 response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
             except Exception as e:
                 print(f"Error during inference: {e}")

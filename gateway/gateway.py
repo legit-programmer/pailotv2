@@ -1,14 +1,16 @@
+from gateway.utils import _task_error_handler
+from surfaces.surf_discord import start_discord_bot
+from gateway.connection_manager import ConnectionManager
+from agent.agent import get_global_agent
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, WebSocket
+from contextlib import asynccontextmanager
+import asyncio
 from dotenv import load_dotenv
 load_dotenv()
-import asyncio
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
-from agent.agent import get_global_agent
-from gateway.connection_manager import ConnectionManager
-from surfaces.surf_discord import start_discord_bot
 
 cm: ConnectionManager = None
+
 
 
 @asynccontextmanager
@@ -19,7 +21,9 @@ async def lifespan(app: FastAPI):
     global_agent = await get_global_agent()
     cm = ConnectionManager(global_agent=global_agent)
 
-    discord_task = asyncio.create_task(start_discord_bot())
+    discord_task = asyncio.create_task(start_discord_bot(), name="discord_bot")
+    discord_task.add_done_callback(_task_error_handler)
+    await asyncio.sleep(0)  # yield control so the task actually starts
     yield
 
     discord_task.cancel()

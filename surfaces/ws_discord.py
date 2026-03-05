@@ -2,6 +2,7 @@ import asyncio
 import discord
 import websockets
 
+from gateway.utils import get_discord_channel
 from models.events import Event, EventType
 
 
@@ -43,24 +44,12 @@ async def receive_msgs(client: discord.Client):
         try:
             async for message in gateway:
                 event = Event.model_validate_json(message)
-                if event.event_type == EventType.AGENT_RESPONSE and event.session_id and event.data:
-                    try:
-                        channel_id = int(event.session_id)
-                    except (TypeError, ValueError):
-                        print(
-                            f"Invalid session/channel id: {event.session_id}")
-                        continue
-
-                    channel = client.get_channel(channel_id)
-                    if channel is None:
-                        try:
-                            channel = await client.fetch_channel(channel_id)
-                        except Exception as fetch_error:
-                            print(
-                                f"Unable to resolve channel {channel_id}: {fetch_error}")
-                            continue
-
-                    await channel.send(event.data["message"])
+                if event.session_id:
+                    channel = await get_discord_channel(event.session_id, event, client)
+                    if event.event_type == EventType.AGENT_RESPONSE and event.data and channel:
+                        await channel.send(event.data["message"])
+                    elif event.event_type == EventType.ERROR and event.data and channel:
+                        await channel.send(f"Error:\n ```{event.data['message']}```")
 
         except asyncio.CancelledError:
             raise

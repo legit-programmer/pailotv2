@@ -2,6 +2,7 @@
 import asyncio
 import discord
 from discord.message import Message
+from gateway.utils import _task_error_handler
 from surfaces.ws_discord import connect_to_gateway, get_gateway, reset_gateway, receive_msgs
 from models.events import Event, EventType
 import os
@@ -19,7 +20,8 @@ async def on_ready():
     print(f'We have logged in as {client.user}')
     await connect_to_gateway("ws://localhost:8000/gateway/ws", token="valid_token")
     if receiver_task is None or receiver_task.done():
-        receiver_task = asyncio.create_task(receive_msgs(client))
+        receiver_task = asyncio.create_task(receive_msgs(client), name="discord_receiver")
+        receiver_task.add_done_callback(_task_error_handler)
 
 
 @client.event

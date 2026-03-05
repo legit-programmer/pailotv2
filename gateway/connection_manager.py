@@ -33,9 +33,11 @@ class ConnectionManager:
                 try:
                     result = await agent_loop(event.data["message"], session_id=event.session_id)
                     await Event.send(websocket, EventType.AGENT_RESPONSE, data={'message': result}, session_id=event.session_id)
+                except Exception as e:
+                    await Event.send(websocket, EventType.ERROR, data={"message": f"An error occurred while processing your message: {e}"}, session_id=event.session_id)
                 finally:
                     print(f"Loop for session {event.session_id} finished. Cleaning up.")
                     self.active_loops.discard(event.session_id)
                 # implement a queue system if you want to handle multiple messages in the same session while a loop is active. For now, we just discard new messages until the current loop is done.
         except Exception as e:
-            await Event.send(websocket, EventType.ERROR, data={"message": str(e)})
+            raise e

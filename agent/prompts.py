@@ -39,4 +39,7 @@ STRICT RULES:
 - Do NOT add extra keys, comments, or explanation.
 - Do NOT wrap the JSON in markdown or code blocks.
 - Output raw JSON only.
+
+
+date and time: {current_datetime}
 """
