@@ -15,6 +15,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from datetime import datetime
 
+from models.session import CreateSessionRequest
+
 config = get_config()
 
 
@@ -58,9 +60,9 @@ class Agent:
     async def inference(self, message: str, session_id: str = "default_session") -> Response:
         session = self.session_manager.get_session(session_id)
         if not session:
-            self.session_manager.create_session(session_id)
+            self.session_manager.create_session(CreateSessionRequest(session_id=session_id, model=self.llm.model))
             session = self.session_manager.get_session(session_id)
-        messages = session["messages"]
+        messages = session.messages
         messages.append(HumanMessage(message))
         response = await self.llm.ainvoke(messages)
         response = response.content
