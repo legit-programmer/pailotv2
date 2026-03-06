@@ -5,3 +5,4 @@
 - switch context based on channel ids / session ids, each session is running in its own thread.
 - handle character limits on the client side
 - add file upload support
+- model switch command (for discord atm)
