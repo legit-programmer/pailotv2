@@ -6,3 +6,4 @@
 - handle character limits on the client side
 - add file upload support
 - model switch command (for discord atm)
+- reply message support (discord) 

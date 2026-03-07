@@ -30,6 +30,26 @@ async def on_message(message: Message):
         return
     gateway = await get_gateway()
     if gateway:
+        # handle commands in a more robust way in the future, maybe with a command prefix and a command parser. For now, we just check if the message starts with certain strings.
+        if message.content.startswith(">reset"):
+            await reset_gateway()
+            await message.channel.send("Gateway reset successfully.")
+        elif message.content.startswith(">change_model"):
+            parts = message.content.split()
+            if len(parts) < 2:
+                await message.channel.send("Please specify a model name. Usage: `>change_model <model_name>`")
+                return
+            new_model = parts[1]
+            try:
+                await Event.client_send(gateway, EventType.CHANGE_MODEL, data={"model": new_model}, session_id=str(message.channel.id))
+                await message.channel.send(f"Model change request sent for session {message.channel.id} to {new_model}.")
+                
+            except Exception as e:
+                print(f"Failed to send change model event to gateway: {e}")
+                await reset_gateway()
+                await message.channel.send("Failed to connect to gateway. Please try again later.")
+            return
+            
         try:
             await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": message.content}, session_id=str(message.channel.id))
             await message.channel.typing()

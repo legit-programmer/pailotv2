@@ -34,10 +34,21 @@ class ConnectionManager:
                     result = await agent_loop(event.data["message"], session_id=event.session_id)
                     await Event.send(websocket, EventType.AGENT_RESPONSE, data={'message': result}, session_id=event.session_id)
                 except Exception as e:
-                    await Event.send(websocket, EventType.ERROR, data={"message": f"An error occurred while processing your message: {e}"}, session_id=event.session_id)
+                    await Event.send(websocket, EventType.ERROR, data={"message": f"An error occurred while processing your message: {e}"}, session_id=event.session_id)    
                 finally:
                     print(f"Loop for session {event.session_id} finished. Cleaning up.")
                     self.active_loops.discard(event.session_id)
                 # implement a queue system if you want to handle multiple messages in the same session while a loop is active. For now, we just discard new messages until the current loop is done.
+            elif event.event_type == EventType.CHANGE_MODEL and event.session_id and event.data:
+                new_model = event.data.get("model")
+                if new_model:
+                    try:
+                        agent = await get_global_agent()
+                        agent.session_manager.update_session_model(event.session_id, new_model)
+                        await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": f"Model for session {event.session_id} updated to {new_model}"}, session_id=event.session_id)
+                    except ValueError as e:
+                        await Event.send(websocket, EventType.ERROR, data={"message": str(e)}, session_id=event.session_id)
+                else:
+                    await Event.send(websocket, EventType.ERROR, data={"message": "No model specified in change model event"}, session_id=event.session_id)
         except Exception as e:
             raise e

@@ -14,6 +14,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from datetime import datetime
+from gateway.utils import evaluate_provider
 
 from models.session import CreateSessionRequest
 
@@ -62,8 +63,16 @@ class Agent:
         if not session:
             self.session_manager.create_session(CreateSessionRequest(session_id=session_id, model=self.llm.model))
             session = self.session_manager.get_session(session_id)
+        
+        if not self.llm.model.startswith(session.model):
+            try:
+                self.llm = evaluate_provider(session.model)
+            except Exception as e:
+                raise ValueError(f"Model provider for {session.model} not found: {e}")
+            
         messages = session.messages
         messages.append(HumanMessage(message))
+        print(f"inferencing {self.llm.model} now..")
         response = await self.llm.ainvoke(messages)
         response = response.content
         # Some providers return content as a list of blocks instead of a string
@@ -82,8 +91,10 @@ class Agent:
             parsed_response = {}
         return Response(**parsed_response)
 
+agent = None
 
 async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3.1-flash-lite-preview") -> Agent:
+    global agent
     configure_all_tools()
     mcp_manager = MCPManager()
     session_manager = SessionManager()
@@ -96,20 +107,19 @@ async def configure_global_agent(provider: Literal["openai", "google_genai", "ol
     await agent.initialize_model(provider=provider, model_name=model_name)
     return agent
 
-agent = None
 
 
-async def get_global_agent():
+async def get_global_agent() -> Agent:
     global agent
     if agent is None:
-        agent = await configure_global_agent()
+        raise ValueError("Global agent is not initialized yet. Please call configure_global_agent() first.")
     return agent
 
 
 async def loop(user_msg, session_id):
     global agent
     if agent is None:
-        return "Global Agent is not initialized yet. Please try again in a moment."
+        raise ValueError("Global Agent is not initialized yet. Please call configure_global_agent() first.")
 
     while True:
         response = await agent.inference(user_msg, session_id=session_id)
@@ -118,7 +128,6 @@ async def loop(user_msg, session_id):
             result = await call_tools(response.tool_calls, agent)
             print("pushing results to context")
             try:
-                print("inferencing now..")
                 response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
             except Exception as e:
                 print(f"Error during inference: {e}")

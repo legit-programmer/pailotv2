@@ -12,6 +12,7 @@ class EventType(str, Enum):
     UNAUTHORIZED = "unauthorized"
     ERROR = "error"
     AUTHENTICATED = "authenticated"
+    CHANGE_MODEL = "change_model"
 
 class Event(BaseModel):
     event_type: EventType

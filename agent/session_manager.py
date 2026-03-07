@@ -23,3 +23,11 @@ class SessionManager:
     def delete_session(self, session_id: str):
         if session_id in self.sessions:
             del self.sessions[session_id]
+
+    def update_session_model(self, session_id: str, new_model: str):
+        session = self.get_session(session_id)
+        if session:
+            session.model = new_model
+        else:
+            self.create_session(CreateSessionRequest(session_id=session_id, 
+            model=new_model))

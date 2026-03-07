@@ -1,7 +1,8 @@
 import asyncio
 from discord import Client
 from models.events import Event
-
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 def verify_token(token: str) -> bool:
     # Placeholder for token verification logic
@@ -35,4 +36,12 @@ async def get_discord_channel(channel_id: int, event: Event, client: Client):
             print(
                 f"Unable to resolve channel {channel_id}: {fetch_error}")
             return
-    
+
+def evaluate_provider(model_name: str):
+    model_name = model_name.lower()
+    if "gemini" in model_name:
+        return ChatGoogleGenerativeAI(model=model_name)
+    elif "gpt" in model_name:
+        return ChatOpenAI(model=model_name)
+    else:
+        raise

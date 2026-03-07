@@ -1,7 +1,7 @@
 from gateway.utils import _task_error_handler
 from surfaces.surf_discord import start_discord_bot
 from gateway.connection_manager import ConnectionManager
-from agent.agent import get_global_agent
+from agent.agent import configure_global_agent, get_global_agent
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, WebSocket
 from contextlib import asynccontextmanager
@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     # Initialize the agent inside uvicorn's event loop so MCP sessions
     # are bound to the same loop that will later call their tools.
     global cm
-    global_agent = await get_global_agent()
+    global_agent = await configure_global_agent()
     cm = ConnectionManager(global_agent=global_agent)
 
     discord_task = asyncio.create_task(start_discord_bot(), name="discord_bot")
