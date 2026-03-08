@@ -30,7 +30,8 @@ Here is pailot configuring a startup service for itself on a vps machine.
   ```
 3. Install the dependencies:
 ```
-pip install -r requirements.txt
+uv venv
+uv sync
 ```
 4. Run the agent:
 ```
