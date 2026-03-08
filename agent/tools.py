@@ -33,6 +33,8 @@ def read_file(path: str):
 
 def configure_all_tools():
     print("Configuring tools...")
+    # for now, tools are defined locally in agent/agent.py and registered with the MCP manager when the agent is initialized. In the future, we can move tool definitions to separate files in the tools directory and dynamically load them here.
+    
         # add_tool(Tool(
         #     name="execute_command",
         #     description="Executes a shell command and returns the output, error and exit code.",

@@ -1,93 +1,44 @@
 # pailotv2 — Overview
 
-pailotv2 is an extensible agent framework that integrates large language models (via LangChain / OpenAI) with a modular tool system (local tools and remote MCP-provided tools). It is intended as a scaffold for building agents that can reason, call tools, and incorporate external functionality via MCP (Micro-Client-Provider) connections.
+My implementation of OpenClaw but in Python. Occupies around 800 MB of memory when running, including the playwright (browser) and Serena (shell executor) mcp. Currently only supports a discord bot interface, but the architecture is designed to be modular and support multiple interfaces (like Telegram, Slack, etc.) in the future.
 
-Key features
+## Tools and mcps
 
-- LLM-driven agent loop: The Agent sends messages to an LLM (ChatOpenAI), expects structured JSON responses, and acts on tool_call instructions returned by the model.
-- Local tools: Built-in helpers for executing shell commands, reading and writing files, with a call flow that supports manual confirmation for safety.
-- MCP integration: MCPManager can register local MCPs (via stdio) and HTTP MCPs, discover remote tools, and forward tool calls to external MCPs.
-- Pluggable model tools: Model-visible tool definitions (Pydantic models) that can be embedded in the agent's system prompt so the LLM knows what tools are available.
-- Simple interactive CLI: main.py demonstrates a minimal interactive loop that initializes MCPs, the agent, and processes user inputs.
+Pailot uses a modular tool system, where tools can be registered with the MCP manager and then used by the agent. Currently, there are two MCPs: a playwright MCP for web automation and a Serena MCP for shell command execution. The tools are defined locally in `agent/agent.py` and registered with the MCP manager when the agent is initialized. You can add or remove mcp servers as its modular and they will be automatically picked up by the agent.
 
-Quick start (local development)
+```python
+await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium"])
+await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
+await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
+```
 
-1. Requirements
-   - Python >= 3.13
-   - Create/activate a virtual environment (recommended)
+## Screenshots
 
-2. Install
+Here is pailot configuring a startup service for itself on a vps machine.
 
-   python -m venv .venv
-   .\.venv\Scripts\activate   # Windows
-   python -m pip install --upgrade pip
-   python -m pip install -e .
+![alt text](assets/image-1.png)
 
-3. Configure
+## Running locally
+1. Get a discord bot token and invite the bot to your server.
+2. Create a `.env` file in the root of the project and add the following variables:
+  ```
+  DISCORD_MASTER_USER_ID=your_discord_user_id
+  BOT_TOKEN=your_discord_bot_token
+  GEMINI_API_KEY=your_gemini_api_key # use OPENAI_API_KEY if you want, but the agent runs on gemini by default, make sure you run >change_model <model_name> command in the discord server to switch to the model you want to use.
+  OS=windows/linux/mac
+  TAVILY_API_KEY=your_tavily_api_key (optional, only needed if you want to use the web search tool, unregister from agent/agent.py if you don't want to use it)
+  ```
+3. Install the dependencies:
+```
+pip install -r requirements.txt
+```
+4. Run the agent:
+```
+python -m gateway.gateway
+```
+This spins up the fastapi gateway server along with the discord bot script. The bot will automatically connect to the gateway server and be ready to receive commands.
 
-- Create a .env file at the project root with at least:
+### Note
 
-  OPENAI_API_KEY=your_openai_key
-  TAVILY_API_KEY=your_tavily_key
+This project is under active development and is open for contributions, so if you want to add a new tool or interface, feel free to submit a pull request or open an issue.
 
-4. Run the example CLI
-
-   python main.py
-
-The interactive loop will prompt for user input. The agent may request tool calls (which are executed via MCPs or local tools); local tools prompt for manual confirmation before running.
-
-How it works (brief)
-
-- The Agent prepares a SYSTEM_PROMPT that lists available tools and other context, then sends user + system messages to the LLM.
-- The LLM is expected to respond with JSON that matches the Response model (tool_call flag, tool_calls list, and/or a final natural-language response).
-- If the model requests tool calls, the agent attempts to run them using MCPManager (remote) or the agent's local tool_map. Results are fed back to the LLM for subsequent reasoning.
-
-Core modules
-
-- agent/
-  - agent.py — Agent lifecycle, LLM initialization, inference loop
-  - prompts.py — SYSTEM_PROMPT template used to describe tools and behavior to the LLM
-  - tools.py — local tool implementations (execute_command, read_file, write_file) and call orchestration
-- mcps/
-  - mcp_manager.py — register and manage local/HTTP MCP clients; discover and call remote tools
-- models/
-  - model_tools.py — Pydantic Tool and ModelTools structures
-  - response.py — Response and ToolCall Pydantic models used to parse LLM outputs
-- config.py — dotenv-based configuration helper
-- main.py — example interactive entrypoint demonstrating agent usage
-
-Security and safety notes
-
-- execute_command runs shell commands with shell=True. Use extreme caution and avoid running this in untrusted environments.
-- Local tool execution currently requires manual confirmation (input()) as a safety measure. For automated environments you may want to add a non-interactive / allowlist mode.
-- Keep API keys and secrets out of source control; use .env and environment variables.
-
-Development notes & suggestions
-
-- Add programmatic registration of model-visible tools (uncomment and use configure_all_tools) so the SYSTEM_PROMPT always reflects the actual toolset.
-- Improve parsing error handling and add robust validation for model JSON outputs.
-- Consider adding tests (pytest), formatters (black), and linters (ruff) and documenting commands for CI.
-
-Roadmap (high-level)
-
-- Agent-specific tool classes and per-agent tool maps
-- Tool for executing commands that leverage historical context
-- Events and gateway support (for real-time integrations)
-- Surfaces (Discord, Telegram, etc.) to expose the agent to external chat platforms
-- Improved browsing and context management utilities
-
-Contributing
-
-Contributions are welcome. Please open issues for ideas or bugs, and submit PRs with focused changes. If you have preferred contribution guidelines or a code of conduct, add links or files to the repo.
-
-License
-
-No LICENSE file detected in the repository. Add an appropriate license (e.g., MIT, Apache-2.0) and update this section.
-
-Contact
-
-If you want an author or maintainer contact listed, provide a name/email or link and I will add it.
-
-Note about this file
-
-This overview README was generated by Pailot (the desktop assistant) while analyzing the project structure and source. If you want me to write this into README.md (overwrite/create a new file), or to modify wording/tone or add examples, tell me which write mode to use (overwrite / new / prompt) and any edits you want.

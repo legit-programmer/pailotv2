@@ -44,7 +44,7 @@ class Agent:
         all_tools = self.tools.model_dump_json() + "\n" + \
             str(self.mcp_tools) if self.mcp_tools else ""
         system_prompt = SYSTEM_PROMPT.format(
-            tools=all_tools, operating_system="Windows", current_datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            tools=all_tools, operating_system=config.operating_system, current_datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.session_manager.set_base_prompt(
             SystemMessage(content=system_prompt))
 
@@ -95,7 +95,7 @@ agent = None
 
 async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3.1-flash-lite-preview") -> Agent:
     global agent
-    configure_all_tools()
+    # configure_all_tools() # tools are now configured in the MCPs instead of locally, so this is no longer needed. Keeping it here in case we want to add local tools in the future.
     mcp_manager = MCPManager()
     session_manager = SessionManager()
     await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium"])

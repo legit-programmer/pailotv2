@@ -6,6 +6,7 @@ from gateway.utils import _task_error_handler
 from surfaces.ws_discord import connect_to_gateway, get_gateway, reset_gateway, receive_msgs
 from models.events import Event, EventType
 import os
+from config import get_config
 
 
 intents = discord.Intents.all()
@@ -26,7 +27,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message: Message):
-    if message.author == client.user or message.author.id != 1466514404941103309:
+    if message.author == client.user or message.author.id != get_config().discord_master_user_id:
         return
     gateway = await get_gateway()
     if gateway:
