@@ -1,4 +1,4 @@
-# pailotv2 — Overview
+# pailot — Overview
 
 My implementation of OpenClaw but in Python. Occupies around 800 MB of memory when running, including the playwright (browser) and Serena (shell executor) mcp. Currently only supports a discord bot interface, but the architecture is designed to be modular and support multiple interfaces (like Telegram, Slack, etc.) in the future.
 
@@ -30,7 +30,8 @@ Here is pailot configuring a startup service for itself on a vps machine.
   ```
 3. Install the dependencies:
 ```
-pip install -r requirements.txt
+uv venv
+uv sync
 ```
 4. Run the agent:
 ```

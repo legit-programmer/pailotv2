@@ -5,7 +5,6 @@
 - switch context based on channel ids / session ids, each session is running in its own thread.
 - handle character limits on the client side
 - add file upload support
-- model switch command (for discord atm)
 - reply message support (discord) 
 - add memory support
 - store conversations in a db
