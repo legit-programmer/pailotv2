@@ -10,3 +10,4 @@
 - add memory support
 - store conversations in a db
 - onboarding ?
+- proper config management

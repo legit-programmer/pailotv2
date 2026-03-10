@@ -34,7 +34,7 @@ async def on_message(message: Message):
         # handle commands in a more robust way in the future, maybe with a command prefix and a command parser. For now, we just check if the message starts with certain strings.
         if message.content.startswith(">reset"):
             await reset_gateway()
-            await message.channel.send("Gateway reset successfully.")
+            return await message.channel.send("Gateway reset successfully.")
         elif message.content.startswith(">change_model"):
             parts = message.content.split()
             if len(parts) < 2:
@@ -52,7 +52,13 @@ async def on_message(message: Message):
             return
             
         try:
-            await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": message.content}, session_id=str(message.channel.id))
+            messsage_to_send = ""
+            if message.reference:
+                original_message = message.reference.resolved if isinstance(message.reference.resolved, Message) else message.channel.fetch_message(message.reference.message_id)
+                messsage_to_send += f"Replying to: {original_message.content}\n\n{message.content}"
+            else:
+                messsage_to_send = message.content
+            await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": messsage_to_send}, session_id=str(message.channel.id))
             await message.channel.typing()
         except Exception as e:
             print(f"Failed to send message to gateway: {e}")
