@@ -133,4 +133,5 @@ async def loop(user_msg, session_id):
                 print(f"Error during inference: {e}")
                 return f"Error during inference: {e}"
 
+        agent.session_manager.save_session(agent.session_manager.get_session(session_id))
         return response.response
