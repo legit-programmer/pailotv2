@@ -1,4 +1,5 @@
 import asyncio
+import os
 from discord import Client
 from models.events import Event
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -45,3 +46,22 @@ def evaluate_provider(model_name: str):
         return ChatOpenAI(model=model_name)
     else:
         raise
+
+def resolve_env_variable(expression) -> str | list[str]:
+    if isinstance(expression, str):
+        chunks = expression.split("}")
+        variables = [chunk.split("{")[-1] for chunk in chunks if "{" in chunk]
+        for var in variables:
+            try:
+                env = os.getenv(var)
+                if env is None:
+                    continue
+                expression = expression.replace(f"{{{var}}}", env)
+            except Exception as e:
+                continue
+        return expression
+    
+    elif isinstance(expression, list):
+        return [resolve_env_variable(item) for item in expression]
+
+    raise ValueError(f"Unsupported expression type: {type(expression)}. Expected str or list of str.")

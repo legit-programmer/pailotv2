@@ -6,7 +6,12 @@ from models.response import Response
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import asyncio
+import json
+import logging
 from config import get_config
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 from agent.prompts import SYSTEM_PROMPT
 from agent.tools import configure_all_tools, call_tools, execute_command, read_file, write_file
 from models.model_tools import Tool, get_model_tools, ModelTools
@@ -38,9 +43,9 @@ class Agent:
 
     async def initialize(self):
         if self.mcp_manager:
+            await self.mcp_manager.configure_from_file()
             self.mcp_tools = await self.mcp_manager.discover_all_tools()
-            print(
-                f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
+            logger.info(f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
         all_tools = self.tools.model_dump_json() + "\n" + \
             str(self.mcp_tools) if self.mcp_tools else ""
         system_prompt = SYSTEM_PROMPT.format(
@@ -72,7 +77,7 @@ class Agent:
             
         messages = session.messages
         messages.append(HumanMessage(message))
-        print(f"inferencing {self.llm.model} now..")
+        logger.info(f"inferencing {self.llm.model} now..")
         response = await self.llm.ainvoke(messages)
         response = response.content
         # Some providers return content as a list of blocks instead of a string
@@ -87,7 +92,7 @@ class Agent:
             if not isinstance(parsed_response, dict):
                 parsed_response = {}
         except Exception as e:
-            print("Error parsing response:", e)
+            logger.error(f"Error parsing response: {e}")
             parsed_response = {}
         return Response(**parsed_response)
 
@@ -98,9 +103,6 @@ async def configure_global_agent(provider: Literal["openai", "google_genai", "ol
     # configure_all_tools() # tools are now configured in the MCPs instead of locally, so this is no longer needed. Keeping it here in case we want to add local tools in the future.
     mcp_manager = MCPManager()
     session_manager = SessionManager()
-    await mcp_manager.register_local_mcp("playwright", ["npx", "@playwright/mcp@latest", "--browser", "chromium"])
-    await mcp_manager.register_http_mcp("tavily_web_search", "https://mcp.tavily.com/mcp/?tavilyApiKey=" + config.tavily_api_key)
-    await mcp_manager.register_local_mcp("serena", ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"])
 
     agent = Agent(get_model_tools(), model_name,
                   mcp_manager=mcp_manager, session_manager=session_manager)
@@ -126,11 +128,11 @@ async def loop(user_msg, session_id):
         while response.tool_call:
 
             result = await call_tools(response.tool_calls, agent)
-            print("pushing results to context")
+            logger.info("pushing results to context")
             try:
                 response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
             except Exception as e:
-                print(f"Error during inference: {e}")
+                logger.error(f"Error during inference: {e}")
                 return f"Error during inference: {e}"
 
         agent.session_manager.save_session(agent.session_manager.get_session(session_id))
