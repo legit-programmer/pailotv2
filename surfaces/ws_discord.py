@@ -47,7 +47,9 @@ async def receive_msgs(client: discord.Client):
                 if event.session_id:
                     channel = await get_discord_channel(event.session_id, event, client)
                     if event.event_type == EventType.AGENT_RESPONSE and event.data and channel:
-                        await channel.send(event.data["message"])
+                        message_content = event.data.get("message")
+                        for i in range(0, len(message_content), 2000):
+                            await channel.send(message_content[i:i+2000])
                     elif event.event_type == EventType.ERROR and event.data and channel:
                         await channel.send(f"Error:\n ```{event.data['message']}```")
 
