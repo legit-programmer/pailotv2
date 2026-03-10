@@ -7,6 +7,5 @@
 - add file upload support
 - reply message support (discord) 
 - add memory support
-- store conversations in a db
 - onboarding ?
 - proper config management
