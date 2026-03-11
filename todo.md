@@ -9,3 +9,4 @@
 - add memory support
 - onboarding ?
 - proper config management
+- message queues and agent steering

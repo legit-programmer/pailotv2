@@ -50,5 +50,12 @@ class ConnectionManager:
                         await Event.send(websocket, EventType.ERROR, data={"message": str(e)}, session_id=event.session_id)
                 else:
                     await Event.send(websocket, EventType.ERROR, data={"message": "No model specified in change model event"}, session_id=event.session_id)
+            elif event.event_type == EventType.RESET_SESSION and event.session_id:
+                try:
+                    agent = await get_global_agent()
+                    agent.session_manager.delete_session(event.session_id)
+                    await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": f"Session {event.session_id} has been reset successfully."}, session_id=event.session_id)
+                except Exception as e:
+                    await Event.send(websocket, EventType.ERROR, data={"message": f"Failed to reset session: {e}"}, session_id=event.session_id)
         except Exception as e:
             raise e

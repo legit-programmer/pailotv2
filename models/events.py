@@ -13,6 +13,7 @@ class EventType(str, Enum):
     ERROR = "error"
     AUTHENTICATED = "authenticated"
     CHANGE_MODEL = "change_model"
+    RESET_SESSION = "reset_session"
 
 class Event(BaseModel):
     event_type: EventType

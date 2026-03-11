@@ -35,6 +35,15 @@ async def on_message(message: Message):
         if message.content.startswith(">reset"):
             await reset_gateway()
             return await message.channel.send("Gateway reset successfully.")
+        elif message.content.startswith(">session_reset"):
+            try:
+                await Event.client_send(gateway, EventType.RESET_SESSION, session_id=str(message.channel.id))
+                await message.channel.send(f"Session {message.channel.id} has been reset.")
+            except Exception as e:
+                print(f"Failed to send reset session event to gateway: {e}")
+                await reset_gateway()
+                await message.channel.send("Failed to connect to gateway. Please try again later.")
+            return
         elif message.content.startswith(">change_model"):
             parts = message.content.split()
             if len(parts) < 2:
