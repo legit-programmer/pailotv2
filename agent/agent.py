@@ -131,10 +131,24 @@ async def loop(user_msg, session_id):
         response = await agent.inference(user_msg, session_id=session_id)
         while response.tool_call:
 
+            steering_messages = agent.session_manager.get_steering_messages(session_id)
+            if steering_messages:
+                response = await agent.inference(f"""User interrupted, added messages: {",".join(steering_messages)}""", session_id=session_id)
+                continue
+            
+
             result = await call_tools(response.tool_calls, agent)
             logger.info("pushing results to context")
+            prompt = f" Here are the results of the tool calls: {result}"
+
+            
+            steering_messages = agent.session_manager.get_steering_messages(session_id)
+            if steering_messages:
+                prompt = f"{prompt}\nHowever, the user has also added some additional messages while the tools were being called.\nAdded messages: {",".join(steering_messages)}"
+            
+            
             try:
-                response = await agent.inference(f"The result of the tool calls is: {result}", session_id=session_id)
+                response = await agent.inference(prompt, session_id=session_id)
             except Exception as e:
                 logger.error(f"Error during inference: {e}")
                 return f"Error during inference: {e}"

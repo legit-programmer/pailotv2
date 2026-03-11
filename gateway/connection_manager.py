@@ -1,5 +1,4 @@
 import asyncio
-
 from fastapi import WebSocket
 from gateway.utils import verify_token
 from models.events import Event, EventType
@@ -10,7 +9,6 @@ class ConnectionManager:
     def __init__(self, global_agent: Agent):
         self.active_connections: dict[str, WebSocket] = {}
         self.global_agent = global_agent
-        self.active_loops = set()
 
     async def accept_and_authenticate_connection(self, websocket: WebSocket, token: str):
         await websocket.accept()
@@ -25,26 +23,36 @@ class ConnectionManager:
         try:
             data = await websocket.receive_json()
             event = Event(**data)
+            agent = await get_global_agent()
             if event.event_type == EventType.USER_MESSAGE and event.session_id and event.data:
-                if event.session_id in self.active_loops:
-                    return await Event.send(websocket, EventType.ERROR, data={"message": "An agent loop is already active for this session. Please wait until it finishes."}, session_id=event.session_id)
 
-                self.active_loops.add(event.session_id)
                 try:
-                    result = await agent_loop(event.data["message"], session_id=event.session_id)
-                    await Event.send(websocket, EventType.AGENT_RESPONSE, data={'message': result}, session_id=event.session_id)
+                    sm = agent.session_manager
+                    if not sm.is_loop_active(event.session_id):
+                        sm.active_loops.add(event.session_id)
+                    else:
+                        sm.add_steering_message(event.session_id, event.data["message"])
+                        return await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": "Message steered."}, session_id=event.session_id)
+                    
+                    loop_task = asyncio.create_task(agent_loop(
+                        event.data["message"], session_id=event.session_id))
+
+                    async def done_callback(task: asyncio.Task):
+                        sm.active_loops.discard(event.session_id)
+                        await Event.send(websocket, EventType.AGENT_RESPONSE, data={'message': task.result()}, session_id=event.session_id)
+
+                    def callback_wrapper(task: asyncio.Task):
+                        asyncio.create_task(done_callback(task))
+
+                    loop_task.add_done_callback(callback_wrapper)
                 except Exception as e:
-                    await Event.send(websocket, EventType.ERROR, data={"message": f"An error occurred while processing your message: {e}"}, session_id=event.session_id)    
-                finally:
-                    print(f"Loop for session {event.session_id} finished. Cleaning up.")
-                    self.active_loops.discard(event.session_id)
-                # implement a queue system if you want to handle multiple messages in the same session while a loop is active. For now, we just discard new messages until the current loop is done.
+                    await Event.send(websocket, EventType.ERROR, data={"message": f"An error occurred while processing your message: {e}"}, session_id=event.session_id)
             elif event.event_type == EventType.CHANGE_MODEL and event.session_id and event.data:
                 new_model = event.data.get("model")
                 if new_model:
                     try:
-                        agent = await get_global_agent()
-                        agent.session_manager.update_session_model(event.session_id, new_model)
+                        agent.session_manager.update_session_model(
+                            event.session_id, new_model)
                         await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": f"Model for session {event.session_id} updated to {new_model}"}, session_id=event.session_id)
                     except ValueError as e:
                         await Event.send(websocket, EventType.ERROR, data={"message": str(e)}, session_id=event.session_id)
@@ -52,7 +60,6 @@ class ConnectionManager:
                     await Event.send(websocket, EventType.ERROR, data={"message": "No model specified in change model event"}, session_id=event.session_id)
             elif event.event_type == EventType.RESET_SESSION and event.session_id:
                 try:
-                    agent = await get_global_agent()
                     agent.session_manager.delete_session(event.session_id)
                     await Event.send(websocket, EventType.AGENT_RESPONSE, data={"message": f"Session {event.session_id} has been reset successfully."}, session_id=event.session_id)
                 except Exception as e:

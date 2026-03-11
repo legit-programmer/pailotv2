@@ -4,12 +4,15 @@ from langchain_core.messages import SystemMessage, messages_to_dict, messages_fr
 from models.session import Session, CreateSessionRequest
 
 
+
 class SessionManager:
     def __init__(self, db_path="sessions.db"):
         self.db_path = db_path
         self.sessions: dict[str, Session] = {}
         self.base_prompt: SystemMessage = None
         self._init_db()
+        self.active_loops = set()
+        self.message_queues = {}
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -83,3 +86,19 @@ class SessionManager:
             self.save_session(session)
         else:
             self.create_session(CreateSessionRequest(session_id=session_id, model=new_model))
+
+    def is_loop_active(self, session_id: str) -> bool:
+        return session_id in self.active_loops
+    
+    def get_steering_messages(self, session_id: str) -> list[str]:
+        messages = self.message_queues.get(session_id, [])
+        self.clear_steering_messages(session_id)
+        return messages
+    
+    def add_steering_message(self, session_id: str, message: str):
+        if session_id not in self.message_queues:
+            self.message_queues[session_id] = []
+        self.message_queues[session_id].append(message)
+
+    def clear_steering_messages(self, session_id: str):
+        self.message_queues[session_id] = []
