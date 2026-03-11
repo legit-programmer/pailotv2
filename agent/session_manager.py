@@ -27,13 +27,9 @@ class SessionManager:
         self.base_prompt = base_prompt
 
     def create_session(self, session: CreateSessionRequest):
-        messages = []
-        prompt = session.base_prompt or self.base_prompt
-        if prompt:
-            messages.append(prompt)
         new_session = Session(
             session_id=session.session_id,
-            messages=messages,
+            messages=[],
             model=session.model
         )
         self.save_session(new_session)
@@ -49,6 +45,8 @@ class SessionManager:
                 model, messages_json = row
                 messages_dict = json.loads(messages_json)
                 messages = messages_from_dict(messages_dict)
+                # Filter out any old SystemMessages that might have been saved in previous versions
+                messages = [msg for msg in messages if not isinstance(msg, SystemMessage)]
                 session = Session(session_id=session_id, model=model, messages=messages)
                 self.sessions[session_id] = session
                 return session
@@ -58,7 +56,9 @@ class SessionManager:
         self.sessions[session.session_id] = session
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            messages_json = json.dumps(messages_to_dict(session.messages))
+            # Do not save SystemMessages to the database, only user/assistant history.
+            history = [msg for msg in session.messages if not isinstance(msg, SystemMessage)]
+            messages_json = json.dumps(messages_to_dict(history))
             cursor.execute('''
                 INSERT INTO sessions (session_id, model, messages)
                 VALUES (?, ?, ?)

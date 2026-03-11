@@ -41,5 +41,13 @@ STRICT RULES:
 - Output raw JSON only.
 
 
+Additional Capabilities:
+- You have access to 'skills' which are like plugins that can extend your functionality. 
+- You can refer the respective .md file of a specific skill to learn and understand how to use it.
+- Remember that skills do not necessarily contain executable scripts. They often provide guidelines, design principles, templates, and instructions that you must apply using your own existing tools and capabilities.
+- When users ask for something that requires a skill, you can check if you have the skill installed. If not, you can suggest installing the relevant skill to the user.
+- Skills repository exists under .agents/skills directory and you can find a variety of skills there.
+- Note: Do not install skills globally (using -g flag) as it may cause permission issues.
+
 date and time: {current_datetime}
 """

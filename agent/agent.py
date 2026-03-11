@@ -77,8 +77,12 @@ class Agent:
             
         messages = session.messages
         messages.append(HumanMessage(message))
+        
+        # Dynamically inject the most up-to-date system prompt at the very beginning
+        inference_messages = [self.session_manager.base_prompt] + messages if self.session_manager.base_prompt else messages
+        
         logger.info(f"inferencing {self.llm.model} now..")
-        response = await self.llm.ainvoke(messages)
+        response = await self.llm.ainvoke(inference_messages)
         response = response.content
         # Some providers return content as a list of blocks instead of a string
         if isinstance(response, list):
