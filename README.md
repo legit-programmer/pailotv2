@@ -1,4 +1,6 @@
-# pailot — Overview
+# pailot — Overview 
+
+For more detailed architecture breakdown: [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/legit-programmer/pailotv2)
 
 My implementation of OpenClaw but in Python. Occupies around 800 MB of memory when running, including the playwright (browser) and Serena (shell executor) mcp. Currently only supports a discord bot interface, but the architecture is designed to be modular and support multiple interfaces (like Telegram, Slack, etc.) in the future.
 
