@@ -37,6 +37,7 @@ async def get_discord_channel(channel_id: int, event: Event, client: Client):
             print(
                 f"Unable to resolve channel {channel_id}: {fetch_error}")
             return
+    return channel
 
 def evaluate_provider(model_name: str):
     model_name = model_name.lower()
