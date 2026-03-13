@@ -2,7 +2,6 @@
 - implement surfaces (discord, tele etc) - ongoing - discord
 - improve context management
 - heartbeat for websocket connection
-- switch context based on channel ids / session ids, each session is running in its own thread.
 - add file upload support
 - onboarding ?
 - proper config management
