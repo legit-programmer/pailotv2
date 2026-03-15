@@ -1,9 +1,9 @@
-import asyncio
+import inspect
 import subprocess
-import shlex
 from mcps.mcp_manager import MCPManager
 from models.model_tools import add_tool, Tool, ToolArgument, get_model_tools
 from models.response import Response, ToolCall
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 def execute_command(cmd: str):
@@ -65,15 +65,15 @@ def configure_all_tools():
         # ))
 
 
-def call_tool(tool_name: str, args: dict, tool_map: dict):
+async def call_tool(tool_name: str, args: dict, tool_map: dict):
     if tool_name not in tool_map:
         raise ValueError(f"Tool {tool_name} not found")
-    print(f"Calling tool {tool_name} with args {args}")
-    confirm = input("Press Enter to continue...")
-    if confirm.lower() == "exit":
-        print("Exiting...")
-        exit(0)
-    return tool_map[tool_name](**args)
+    
+    func = tool_map[tool_name]
+    if inspect.iscoroutinefunction(func):
+        return await func(**args)
+    else:
+        return func(**args)
 
 
 async def call_tools(tool_calls: list[ToolCall], agent):
@@ -94,7 +94,7 @@ async def call_tools(tool_calls: list[ToolCall], agent):
             if mcp_manager:
                 result = await mcp_manager.call_tool(tool_name, args)
             if not result:
-                result = call_tool(tool_name, args, tool_map=tool_map)
+                result = await call_tool(tool_name, args, tool_map=tool_map)
         except Exception as e:
             result = f"Error calling tool {tool_name}: {e}"
             

@@ -39,6 +39,7 @@ STRICT RULES:
 - Do NOT add extra keys, comments, or explanation.
 - Do NOT wrap the JSON in markdown or code blocks.
 - Output raw JSON only.
+- do not run and execute scripts in a global environment, you have access to 'uv' and have a virtual environment created on your relative path.
 
 
 Additional Capabilities:

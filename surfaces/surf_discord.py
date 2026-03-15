@@ -67,6 +67,13 @@ async def on_message(message: Message):
                 messsage_to_send += f"Replying to: {original_message.content}\n\n{message.content}"
             else:
                 messsage_to_send = message.content
+
+            if message.attachments:
+                messsage_to_send += "\n\nAttachments:\n"
+                for attachment in message.attachments:
+                    os.makedirs(f"attachments/{message.channel.id}", exist_ok=True)
+                    await attachment.save(f"attachments/{message.channel.id}/{attachment.filename}")
+                    messsage_to_send += f"- attachments/{message.channel.id}/{attachment.filename}\n"
             await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": messsage_to_send}, session_id=str(message.channel.id))
             await message.channel.typing()
         except Exception as e:

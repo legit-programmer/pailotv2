@@ -51,7 +51,7 @@ async def receive_msgs(client: discord.Client):
                         print(f"Sending message to channel {channel.id}")
                         message_content = event.data.get("message")
                         if not message_content:
-                            await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": "No message content or invalid format"}, session_id=event.session_id)
+                            await Event.client_send(gateway, EventType.USER_MESSAGE, data={"message": "No message content or invalid format from your side, please resend the message."}, session_id=event.session_id)
                             continue
                         for i in range(0, len(message_content), 2000):
                             await channel.send(message_content[i:i+2000])
