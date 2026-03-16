@@ -5,3 +5,4 @@
 - add file upload support
 - onboarding ?
 - proper config management
+- cron jobs for scheduled tasks
