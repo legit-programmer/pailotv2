@@ -79,6 +79,15 @@ class SessionManager:
             cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
             conn.commit()
 
+    def get_all_session_ids(self) -> list[str]:
+        session_ids = list(self.sessions.keys())
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT session_id FROM sessions')
+            for row in cursor.fetchall():
+                session_ids.append(row[0])
+        return list(set(session_ids))
+
     def update_session_model(self, session_id: str, new_model: str):
         session = self.get_session(session_id)
         if session:

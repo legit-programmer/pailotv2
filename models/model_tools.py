@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Any
 
 
 class ToolArgument(BaseModel):
@@ -11,7 +12,7 @@ class Tool(BaseModel):
     name: str
     description: str
     args: list[ToolArgument] | None = None
-
+    function: Any = Field(default=None, exclude=True)
 
 class ModelTools(BaseModel):
     tools: list[Tool]

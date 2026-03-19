@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
     # Initialize the agent inside uvicorn's event loop so MCP sessions
     # are bound to the same loop that will later call their tools.
     global cm
-    global_agent = await configure_global_agent()
-    cm = ConnectionManager(global_agent=global_agent)
+    cm = ConnectionManager()
+    await configure_global_agent()
 
     discord_task = asyncio.create_task(start_discord_bot(), name="discord_bot")
     discord_task.add_done_callback(_task_error_handler)

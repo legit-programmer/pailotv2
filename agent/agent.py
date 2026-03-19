@@ -29,11 +29,7 @@ config = get_config()
 class Agent:
     def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager = None):
         self.tools = tools
-        self.tool_map = {
-            "execute_command": execute_command,
-            "write_file": write_file,
-            "read_file": read_file
-        }
+        self.tool_map = {tool.name: tool.function for tool in tools.tools}
         self.model_name = model_name
         self.llm = None
         self.response_parser = None
