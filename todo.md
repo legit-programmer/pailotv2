@@ -6,3 +6,4 @@
 - onboarding ?
 - proper config management
 - cron jobs for scheduled tasks
+- send attachments from gateway to surfaces
