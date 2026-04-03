@@ -9,6 +9,7 @@ class Config:
         self.tavily_api_key = os.getenv("TAVILY_API_KEY")
         self.operating_system = os.getenv("OS", "Unknown OS")
         self.discord_master_user_id = int(os.getenv("DISCORD_MASTER_USER_ID"))
+        self.gateway_port=os.getenv("GATEWAY_PORT", "8000")
 
 
 config = None

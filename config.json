@@ -3,18 +3,38 @@
     {
       "name": "playwright",
       "type": "local",
-      "command": ["npx", "@playwright/mcp@latest", "--browser", "chromium"]
+      "command": [
+        "npx",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chromium"
+      ]
     },
     {
       "name": "tavily_web_search",
       "type": "http",
       "url": "https://mcp.tavily.com/mcp/?tavilyApiKey={tavily_api_key}"
-    },    
+    },
     {
       "name": "serena",
       "type": "local",
-      "command": ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ]
+    },
+    {
+      "name": "GoogleWorkspace",
+      "type": "local",
+      "command": [
+        "uvx",
+        "workspace-mcp",
+        "--tool-tier",
+        "core"
+      ]
     }
   ]
 }
-

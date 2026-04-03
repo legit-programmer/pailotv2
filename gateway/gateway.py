@@ -7,9 +7,11 @@ from fastapi import FastAPI, WebSocket
 from contextlib import asynccontextmanager
 import asyncio
 from dotenv import load_dotenv
+from config import get_config
 load_dotenv()
 
 cm: ConnectionManager = None
+config = get_config()
 
 
 
@@ -51,4 +53,4 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(config.gateway_port))

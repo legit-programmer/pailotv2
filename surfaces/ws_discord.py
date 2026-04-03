@@ -5,9 +5,12 @@ import websockets
 
 from gateway.utils import get_discord_channel
 from models.events import Event, EventType
+from config import get_config
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 gateway = None
+config = get_config()
 
 
 async def connect_to_gateway(uri, token=None):
@@ -23,7 +26,7 @@ async def connect_to_gateway(uri, token=None):
 
 async def get_gateway():
     if gateway is None:
-        await connect_to_gateway("ws://localhost:8000/gateway/ws", token="valid_token")
+        await connect_to_gateway(f"ws://localhost:{config.gateway_port}/gateway/ws", token="valid_token")
     return gateway
 
 
