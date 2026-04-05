@@ -22,12 +22,14 @@ from datetime import datetime
 from gateway.utils import evaluate_provider
 
 from models.session import CreateSessionRequest
+from agent.tool_registry import get_tool_registry
 
 config = get_config()
 
 
+
 class Agent:
-    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager = None):
+    def __init__(self, tools: ModelTools, model_name, mcp_manager: MCPManager = None, session_manager: SessionManager = None, filter_tools_by_name: list = None, filter_tools_by_mcp_of: list = None):
         self.tools = tools
         self.tool_map = {tool.name: tool.function for tool in tools.tools}
         self.model_name = model_name
@@ -36,14 +38,25 @@ class Agent:
         self.mcp_tools = None
         self.mcp_manager = mcp_manager
         self.session_manager = session_manager
+        self.tool_registry = None
+        self.filter_tools_by_name = filter_tools_by_name
+        self.filter_tools_by_mcp_of = filter_tools_by_mcp_of
 
     async def initialize(self):
         if self.mcp_manager:
             await self.mcp_manager.configure_from_file()
-            self.mcp_tools = await self.mcp_manager.discover_all_tools()
+            if not self.filter_tools_by_name and not self.filter_tools_by_mcp_of:
+                self.mcp_tools = await self.mcp_manager.discover_all_tools()
+                logger.info(f"No tool filtering applied. All discovered MCP tools are added to context.")
+            else:
+                logger.info(f"Applying tool filtering. filter_tools_by_name: {self.filter_tools_by_name}, filter_tools_by_mcp_of: {self.filter_tools_by_mcp_of}")
+                self.mcp_tools = await self.mcp_manager.get_filtered_tools(filter=self.filter_tools_by_name if self.filter_tools_by_name else self.filter_tools_by_mcp_of, by_name=True if self.filter_tools_by_name else False)
+
+
             logger.info(f"MCP tools discovered: {[t['name'] for t in self.mcp_tools]}")
         all_tools = self.tools.model_dump_json() + "\n" + \
             str(self.mcp_tools) if self.mcp_tools else ""
+        self.tool_registry = get_tool_registry()
         system_prompt = SYSTEM_PROMPT.format(
             tools=all_tools, operating_system=config.operating_system, current_datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.session_manager.set_base_prompt(
@@ -100,12 +113,12 @@ agent = None
 
 async def configure_global_agent(provider: Literal["openai", "google_genai", "ollama"] = "google_genai", model_name: str = "gemini-3.1-flash-lite-preview") -> Agent:
     global agent
-    # configure_all_tools() # tools are now configured in the MCPs instead of locally, so this is no longer needed. Keeping it here in case we want to add local tools in the future.
+    configure_all_tools() 
     mcp_manager = MCPManager()
     session_manager = SessionManager()
 
     agent = Agent(get_model_tools(), model_name,
-                  mcp_manager=mcp_manager, session_manager=session_manager)
+                  mcp_manager=mcp_manager, session_manager=session_manager, filter_tools_by_mcp_of=["serena"])
     await agent.initialize_model(provider=provider, model_name=model_name)
     return agent
 

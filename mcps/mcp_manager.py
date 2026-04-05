@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from gateway.utils import resolve_env_variable
-
+from agent.tool_registry import get_tool_registry
 
 
 class MCPManager:
@@ -98,6 +98,18 @@ class MCPManager:
         if not self.all_tools:
             await self.discover_all_tools()
         return self.all_tools
+    
+    async def get_filtered_tools(self, filter: list[str], by_name=False):
+        all_tools = await self.get_all_tools()
+        
+        filtered_tools = [t for t in all_tools if t["mcp_of"] in filter] if not by_name else [t for t in all_tools if t["name"] in filter]
+        
+        extra_tools = [t for t in all_tools if t not in filtered_tools]
+
+        tool_registry = get_tool_registry()
+        tool_registry.register_tools([str(tool) for tool in extra_tools])
+
+        return filtered_tools
     
     async def call_tool(self, tool_name: str, args):
         all_tools = await self.get_all_tools()

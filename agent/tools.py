@@ -4,6 +4,7 @@ from mcps.mcp_manager import MCPManager
 from models.model_tools import add_tool, Tool, ToolArgument, get_model_tools
 from models.response import Response, ToolCall
 from langchain_google_genai import ChatGoogleGenerativeAI
+from agent.tool_registry import get_tool_registry
 
 
 def execute_command(cmd: str):
@@ -33,16 +34,18 @@ def read_file(path: str):
 
 def configure_all_tools():
     print("Configuring tools...")
-    # for now, tools are defined locally in agent/agent.py and registered with the MCP manager when the agent is initialized. In the future, we can move tool definitions to separate files in the tools directory and dynamically load them here.
+    tool_registry = get_tool_registry()
     
-        # add_tool(Tool(
-        #     name="execute_command",
-        #     description="Executes a shell command and returns the output, error and exit code.",
-        #     args=[
-        #         ToolArgument(name="cmd", type="str",
-        #                      description="The command to execute")
-        #     ]
-        # ))
+    add_tool(Tool(
+        name="search_tools",
+        description="Searches for tools which are not in the active context but are available in the tool registry based on a query.",
+        args=[
+            ToolArgument(name="query", type="str",
+                            description="The query to search for"),
+            ToolArgument(name="k", type="int", description="The number of results to return")
+        ],
+        function=tool_registry.search_tools
+    ))
 
         # add_tool(Tool(
         #     name="write_file",
